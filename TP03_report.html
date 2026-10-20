@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TP03 – Interactive Data Analysis and Visualization with Power BI</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --text: #1f2933;
+    --muted: #5b6770;
+    --line: #d5dbe0;
+    --accent: #1b5e8c;
+    --panel: #f3f6f8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14191d;
+      --text: #e6eaed;
+      --muted: #9aa5ad;
+      --line: #2e373e;
+      --accent: #6fb3dd;
+      --panel: #1c2328;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Georgia, "Times New Roman", serif;
+    line-height: 1.65;
+  }
+  main { max-width: 920px; margin: 0 auto; padding: 40px 20px 64px; }
+  header { border-bottom: 2px solid var(--accent); padding-bottom: 16px; margin-bottom: 28px; }
+  h1 { font-size: 1.7rem; margin: 0 0 6px; line-height: 1.25; }
+  .meta { color: var(--muted); font-family: system-ui, Arial, sans-serif; font-size: .92rem; margin: 0; }
+  h2 { font-size: 1.25rem; margin: 40px 0 10px; color: var(--accent); }
+  h3 { font-size: 1.02rem; margin: 22px 0 6px; font-family: system-ui, Arial, sans-serif; }
+  p, li { max-width: 74ch; }
+  table { border-collapse: collapse; width: 100%; font-family: system-ui, Arial, sans-serif; font-size: .92rem; margin: 10px 0; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--panel); }
+  figure { margin: 18px 0 26px; }
+  figure img { display: block; width: 100%; height: auto; border: 1px solid var(--line); }
+  figcaption { font-family: system-ui, Arial, sans-serif; font-size: .88rem; color: var(--muted); margin-top: 6px; }
+  .report { background: var(--panel); border-left: 4px solid var(--accent); padding: 6px 20px; }
+  .report li { margin: 8px 0; }
+  .missing { display: none; font-family: system-ui, Arial, sans-serif; border: 1px dashed var(--line); padding: 18px; color: var(--muted); }
+  code { font-family: Consolas, "Courier New", monospace; font-size: .9em; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>TP03 – Interactive Data Analysis and Visualization with Power BI</h1>
+  <p class="meta">University of Eloued · Faculty of Exact Sciences · Department of Computer Science<br>
+  Master 2 – AI &amp; Data Science · Module: Big Data Analytics · 2026/2027</p>
+</header>
+
+<h2>1. Dataset</h2>
+<p>Kaggle dataset <em>eCommerce behavior data from multi-category store</em> (mkechinov), file <code>2019-Nov.csv</code>.
+It is a multi-gigabyte file with tens of millions of events (view, cart, purchase). Power BI Desktop cannot load the whole file
+in Import mode on a laptop, so the first 3 million rows were kept in Power Query before loading. These rows cover about
+1.5 days (1–2 November 2019).</p>
+<p>Source: <a href="https://www.kaggle.com/datasets/mkechinov/ecommerce-behavior-data-from-multi-category-store">kaggle.com/datasets/mkechinov/ecommerce-behavior-data-from-multi-category-store</a></p>
+
+<h2>2. Data import and exploration (Task 1)</h2>
+<p>The raw table has 9 columns: <code>event_time</code>, <code>event_type</code>, <code>product_id</code>, <code>category_id</code>,
+<code>category_code</code>, <code>brand</code>, <code>price</code>, <code>user_id</code> and <code>user_session</code>.
+In the profiled sample (first 1000 rows), <code>category_code</code> had 38% empty values and <code>brand</code> 18%.
+<code>event_time</code> was stored as text ending with “UTC”.</p>
+
+<figure>
+  <img src="images/before1.png" alt="Power Query before cleaning, first columns">
+  <figcaption>Before cleaning (1/2): <code>event_time</code> is Text with “UTC”, <code>category_id</code> is numeric, <code>category_code</code> has empty values. Applied steps: Source, Promoted Headers, Changed Type.</figcaption>
+</figure>
+<figure>
+  <img src="images/before2.png" alt="Power Query before cleaning, last columns">
+  <figcaption>Before cleaning (2/2): <code>brand</code> and <code>category_code</code> contain empty values; <code>user_session</code> is present and not needed.</figcaption>
+</figure>
+
+<h2>3. Cleaning and transformation (Task 2)</h2>
+<table>
+  <tr><th>Problem found</th><th>Transformation applied</th></tr>
+  <tr><td>File too large for Import mode</td><td>Kept the first 3,000,000 rows (Keep First Rows)</td></tr>
+  <tr><td>Unused columns</td><td>Removed <code>user_session</code> and <code>category_id</code></td></tr>
+  <tr><td><code>event_time</code> is text with “UTC”</td><td>Replaced “UTC” by nothing, converted to Date/Time, added a <code>Date</code> column (Date Only)</td></tr>
+  <tr><td>Ids treated as numbers, price as text/number</td><td><code>product_id</code> and <code>user_id</code> set to Text, <code>price</code> set to Decimal Number</td></tr>
+  <tr><td>Empty <code>brand</code> and <code>category_code</code></td><td>Replaced empty values by “unknown” (0% empty afterwards)</td></tr>
+  <tr><td><code>category_code</code> holds several levels</td><td>Split at the left-most “.” into <code>main_category</code> and <code>sub_category</code></td></tr>
+  <tr><td>Invalid prices</td><td>Filtered rows to keep <code>price</code> &gt; 0</td></tr>
+  <tr><td>Possible duplicates</td><td>Removed duplicate rows (all columns)</td></tr>
+  <tr><td>Unclear table name</td><td>Renamed the query <code>2019-Nov</code> to <code>nov</code></td></tr>
+</table>
+
+<figure>
+  <img src="images/after1.png" alt="Power Query after cleaning, first columns">
+  <figcaption>After cleaning (1/2): <code>event_time</code> is Date/Time, <code>main_category</code> and <code>sub_category</code> are created, all columns show 0% empty. The full list of applied steps is on the right.</figcaption>
+</figure>
+<figure>
+  <img src="images/after2.png" alt="Power Query after cleaning, last columns">
+  <figcaption>After cleaning (2/2): <code>brand</code> has no empty values, <code>price</code> is a decimal number, <code>user_id</code> is Text, and the new <code>Date</code> column exists.</figcaption>
+</figure>
+
+<h2>4. DAX measures and visuals (Tasks 3–5)</h2>
+<p>Measures: <code>Total Events</code>, <code>Purchases</code>, <code>Revenue</code> (sum of price for purchase events),
+<code>Unique Users</code> and <code>Conversion Rate</code>. The dashboard contains three KPI cards (Total Events, Revenue, Unique Users),
+a bar chart (Top 10 brands by revenue), a column chart (events by event type), a bar chart (revenue by main category, used instead of a map
+because the data has no geographic field), a line chart (purchases per hour), and slicers on event type, main category and brand.</p>
+
+<figure>
+  <img src="images/dashboard.png" alt="Final Power BI dashboard" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
+  <div class="missing">Add your final dashboard screenshot as <code>images/dashboard.png</code> and this image will appear here.</div>
+  <figcaption>Final dashboard.</figcaption>
+</figure>
+
+<h2>5. Summary of findings</h2>
+<div class="report">
+<ol>
+  <li>I loaded 3 million events from the November 2019 file (about 1.5 days of activity), made by 416K unique users, which generated $13.34M in revenue from purchases.</li>
+  <li>Revenue is highly concentrated in a few brands: Apple is first with about $6.4M, followed by Samsung (about $2.7M); Xiaomi, Huawei and LG are far behind.</li>
+  <li>Electronics is by far the strongest main category, followed by appliances and computers; the other categories contribute very little.</li>
+  <li>Almost all events are views (about 2.9M); purchases are only about 44K (around 1.5% of events), which shows a very steep drop in the conversion funnel.</li>
+  <li>Many rows have no brand or category; they were labelled “unknown”, and this group ranks second in revenue by category, so missing data affects the analysis.</li>
+  <li>The slicers (event type, main category, brand) update all KPI cards and charts together, which makes it easy to compare brands and categories.</li>
+  <li>Limitation: only the first 3 million rows were used, so the hourly trend covers a short period and does not represent the whole month.</li>
+</ol>
+</div>
+
+<h2>6. Files in this repository</h2>
+<ul>
+  <li><code>TP03.pbix</code> – Power BI report</li>
+  <li><code>images/</code> – screenshots (imported table, cleaned table, final dashboard)</li>
+  <li><code>TP03_report.html</code> – this report</li>
+</ul>
+<p>The raw CSV is not included because of its size; download it from the Kaggle link above.</p>
+
+</main>
+</body>
+</html>
